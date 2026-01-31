@@ -163,42 +163,46 @@ func read(db *gorm.DB) {
 
 func update(db *gorm.DB) {
 	// Update: update a single field
-	result := db.Model(&User{}).Where("email = ?", "bob@example.com").Update("status", "pending")
-	if result.Error != nil {
-		fmt.Println("failed to update user, ", result.Error)
-	} else if result.RowsAffected == 0 {
-		fmt.Println("user not found")
-	} else {
-		// Verify the update
-		var u User
-		if err := db.Where("email = ?", "bob@example.com").First(&u).Error; err != nil {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				fmt.Println("user not found")
-			} else {
-				fmt.Println("failed to find the user, ", err)
-			}
+	var u User
+	if err := db.Where("email = ?", "bob@example.com").First(&u).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			fmt.Println("user not found")
 		} else {
-			fmt.Println("the updated user: ", u)
+			fmt.Println("failed to find the user, ", err)
+		}
+	} else {
+		fmt.Println("the user before update: ", u)
+		result := db.Model(&u).Update("status", "pending")
+		if result.Error != nil {
+			fmt.Println("failed to update user, ", result.Error)
+		} else {
+			fmt.Println("the user after update: ", u)
 		}
 	}
 
-	// Updates: update multiple fields but ignore zero values
-	result = db.Model(&User{}).Where("email = ?", "fiona@example.com").Updates(User{Age: 50, Status: "inactive"})
+	// Update multiple records with model struct
+	result := db.Model(&User{}).Where("status = ?", "inactive").Update("status", "pending")
 	if result.Error != nil {
 		fmt.Println("failed to update user, ", result.Error)
-	} else if result.RowsAffected == 0 {
-		fmt.Println("failed to update user, user not found")
 	} else {
-		// verify the updates
-		var u User
-		if err := db.Where("email = ?", "fiona@example.com").First(&u).Error; err != nil {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				fmt.Println("user not found")
-			} else {
-				fmt.Println("failed to find the user, ", err)
-			}
+		fmt.Printf("updated %d rows\n", result.RowsAffected)
+	}
+
+	// Updates: update multiple fields but ignore zero values
+	var u1 User
+	if err := db.Where("email = ?", "fiona@example.com").First(&u1).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			fmt.Println("user not found")
 		} else {
-			fmt.Println("the updated user: ", u)
+			fmt.Println("failed to find the user, ", err)
+		}
+	} else {
+		fmt.Println("the user before update: ", u1)
+		result = db.Model(&u1).Updates(User{Age: 50, Status: "inactive"})
+		if result.Error != nil {
+			fmt.Println("failed to update user, ", result.Error)
+		} else {
+			fmt.Println("the user after update: ", u1)
 		}
 	}
 
@@ -206,14 +210,14 @@ func update(db *gorm.DB) {
 	// - If primary key exists → UPDATE
 	// - If primary key is zero → INSERT
 	// - Updates all fields, including zero values
-	u := User{
+	u2 := User{
 		ID:     1,
 		Name:   "",
 		Age:    0,
 		Status: "inactive",
 	}
 
-	result = db.Save(&u)
+	result = db.Save(&u2)
 	if result.Error != nil {
 		fmt.Println("failed to save user, ", result.Error)
 	} else if result.RowsAffected == 0 {
@@ -231,4 +235,8 @@ func update(db *gorm.DB) {
 			fmt.Println("the saved user: ", u)
 		}
 	}
+}
+
+func delete() {
+
 }
