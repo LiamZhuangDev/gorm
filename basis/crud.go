@@ -37,6 +37,7 @@ func CrudTest() {
 
 	create(db)
 	read(db)
+	update(db)
 }
 
 func create(db *gorm.DB) {
@@ -157,5 +158,77 @@ func read(db *gorm.DB) {
 		fmt.Println("failed to count active users, ", err)
 	} else {
 		fmt.Println("the number of active users: ", c)
+	}
+}
+
+func update(db *gorm.DB) {
+	// Update: update a single field
+	result := db.Model(&User{}).Where("email = ?", "bob@example.com").Update("status", "pending")
+	if result.Error != nil {
+		fmt.Println("failed to update user, ", result.Error)
+	} else if result.RowsAffected == 0 {
+		fmt.Println("user not found")
+	} else {
+		// Verify the update
+		var u User
+		if err := db.Where("email = ?", "bob@example.com").First(&u).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				fmt.Println("user not found")
+			} else {
+				fmt.Println("failed to find the user, ", err)
+			}
+		} else {
+			fmt.Println("the updated user: ", u)
+		}
+	}
+
+	// Updates: update multiple fields but ignore zero values
+	result = db.Model(&User{}).Where("email = ?", "fiona@example.com").Updates(User{Age: 50, Status: "inactive"})
+	if result.Error != nil {
+		fmt.Println("failed to update user, ", result.Error)
+	} else if result.RowsAffected == 0 {
+		fmt.Println("failed to update user, user not found")
+	} else {
+		// verify the updates
+		var u User
+		if err := db.Where("email = ?", "fiona@example.com").First(&u).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				fmt.Println("user not found")
+			} else {
+				fmt.Println("failed to find the user, ", err)
+			}
+		} else {
+			fmt.Println("the updated user: ", u)
+		}
+	}
+
+	// Save: replaces an entire record (including zero values)
+	// - If primary key exists → UPDATE
+	// - If primary key is zero → INSERT
+	// - Updates all fields, including zero values
+	u := User{
+		ID:     1,
+		Name:   "",
+		Age:    0,
+		Status: "inactive",
+	}
+
+	result = db.Save(&u)
+	if result.Error != nil {
+		fmt.Println("failed to save user, ", result.Error)
+	} else if result.RowsAffected == 0 {
+		fmt.Println("failed to save user, user not found")
+	} else {
+		// verify the updates
+		var u User
+		if err := db.First(&u, 1).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				fmt.Println("user not found")
+			} else {
+				fmt.Println("failed to find the user, ", err)
+			}
+		} else {
+			fmt.Println("the saved user: ", u)
+		}
 	}
 }
