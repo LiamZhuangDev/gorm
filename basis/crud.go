@@ -38,6 +38,7 @@ func CrudTest() {
 	create(db)
 	read(db)
 	update(db)
+	delete(db)
 }
 
 func create(db *gorm.DB) {
@@ -180,7 +181,7 @@ func update(db *gorm.DB) {
 		}
 	}
 
-	// Update multiple records with model struct
+	// Update multiple records with model type
 	result := db.Model(&User{}).Where("status = ?", "inactive").Update("status", "pending")
 	if result.Error != nil {
 		fmt.Println("failed to update user, ", result.Error)
@@ -237,6 +238,34 @@ func update(db *gorm.DB) {
 	}
 }
 
-func delete() {
+// Since 'User' model does not have 'gorm.DeletedAt' field, Delete() is permanent and cannot be recoverd (hard delete)
+func delete(db *gorm.DB) {
+	// delete by primary key
+	result := db.Delete(&User{}, 1) // equivalent to db.Where("id = ?", 1).Delete(&User{})
+	if result.Error != nil {
+		fmt.Println("failed to delete user, ", result.Error)
+	} else {
+		fmt.Println("rows deleted: ", result.RowsAffected)
+	}
 
+	// delete with condition
+	result = db.Where("status = ?", "inactive").Delete(&User{})
+	if result.Error != nil {
+		fmt.Println("failed to delete user, ", result.Error)
+	} else {
+		fmt.Println("rows deleted: ", result.RowsAffected)
+	}
+
+	// delete a loaded entity
+	var u User
+	if err := db.Where("Age > ?", 30).First(&u).Error; err != nil {
+		fmt.Println("failed to find the first user, ", err)
+	} else {
+		result := db.Delete(&u)
+		if result.Error != nil {
+			fmt.Println("failed to delete user, ", result.Error)
+		} else {
+			fmt.Println("rows deleted: ", result.RowsAffected)
+		}
+	}
 }
