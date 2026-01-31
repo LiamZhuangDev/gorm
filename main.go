@@ -6,6 +6,7 @@ import (
 
 func main() {
 	basis.CrudTest()
+	basis.QueryTest()
 }
 
 // import (
