@@ -12,6 +12,9 @@ func QueryTest() {
 	scopedTest(db)
 	likeTest(db)
 	groupTest(db)
+	// More examples:
+	// db.Where("status IN ?", []string{"active", "pending"}).Find(&users)
+	// db.Where("status = ? AND age > ?", "active", 25).Find(&users)
 }
 
 func setup(dsn string) *gorm.DB {
