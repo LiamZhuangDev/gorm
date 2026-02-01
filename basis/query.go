@@ -10,6 +10,8 @@ import (
 func QueryTest() {
 	db := setup()
 	scopedTest(db)
+	likeTest(db)
+	groupTest(db)
 }
 
 func setup() *gorm.DB {
@@ -62,7 +64,7 @@ func setup() *gorm.DB {
 		},
 		{
 			Name:   "Fiona",
-			Email:  "fiona@example.com",
+			Email:  "fiona@gmail.com",
 			Age:    40,
 			Status: "active",
 		},
@@ -77,9 +79,13 @@ func setup() *gorm.DB {
 	return db
 }
 
+// In GORM, Scopes are a way to reuse and compose query conditions cleanly.
+// - Reuse common query logic
+// - Compose filters dynamically
+// - only build queries, not execute them (call First, Take, Update, Delete, etc to execute)
 func scopedTest(db *gorm.DB) {
 	paged := []User{}
-	if err := db.Scopes(paginate(1, 2)).Where("status = ?", "active").Order("created_at desc").Find(&paged).Error; err != nil {
+	if err := db.Scopes(active(), ageBetween(30, 50), paginate(1, 2), orderByCreated(true)).Find(&paged).Error; err != nil {
 		panic(err)
 	}
 	if len(paged) != 2 {
@@ -89,6 +95,21 @@ func scopedTest(db *gorm.DB) {
 	}
 }
 
+// Status scope
+func active() func(db *gorm.DB) *gorm.DB {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("status = ?", "active")
+	}
+}
+
+// Age scope
+func ageBetween(min, max int) func(db *gorm.DB) *gorm.DB {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("age BETWEEN ? AND ?", min, max)
+	}
+}
+
+// Paginate scope
 func paginate(pageNum, pageSize int) func(db *gorm.DB) *gorm.DB {
 	return func(db *gorm.DB) *gorm.DB {
 		// normalize input
@@ -109,4 +130,38 @@ func paginate(pageNum, pageSize int) func(db *gorm.DB) *gorm.DB {
 		// skip ${offset} records and return at most ${pageSize} records
 		return db.Offset(offset).Limit(pageSize)
 	}
+}
+
+// Sorting scope
+func orderByCreated(desc bool) func(db *gorm.DB) *gorm.DB {
+	return func(db *gorm.DB) *gorm.DB {
+		if desc {
+			return db.Order("created_at DESC")
+		}
+		return db.Order("created_at ASC")
+	}
+}
+
+// Use LIKE for pattern matching (SQL wildcard: %)
+func likeTest(db *gorm.DB) {
+	u := []User{}
+
+	if err := db.Where("email LIKE ?", "%@gmail.com").Select("name", "email").Find(&u).Error; err != nil {
+		panic(err)
+	}
+	fmt.Println("users found:", u)
+}
+
+// Aggregation
+// Group is required when using aggregate functions like COUNT()
+func groupTest(db *gorm.DB) {
+	type StatusCount struct {
+		Status string
+		Total  int64
+	}
+	sc := []StatusCount{}
+	if err := db.Model(&User{}).Select("status, COUNT(*) as total").Group("status").Order("total DESC").Scan(&sc).Error; err != nil {
+		panic(err)
+	}
+	fmt.Println("group users by status,", sc)
 }
