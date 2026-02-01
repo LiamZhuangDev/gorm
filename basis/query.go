@@ -8,15 +8,13 @@ import (
 )
 
 func QueryTest() {
-	db := setup()
+	db := setup("query.db")
 	scopedTest(db)
 	likeTest(db)
 	groupTest(db)
 }
 
-func setup() *gorm.DB {
-	dsn := "query.db"
-
+func setup(dsn string) *gorm.DB {
 	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{})
 	if err != nil {
 		panic(fmt.Sprintf("Failed to open %s, %v\n", dsn, err))
