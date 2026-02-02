@@ -10,13 +10,15 @@ import (
 )
 
 type User struct {
-	ID        uint      `gorm:"primaryKey"`
-	Name      string    `gorm:"size:64;not null"`
-	Email     string    `gorm:"size:128;uniqueIndex;not null"`
-	Age       uint8     `gorm:"not null"`
-	Status    string    `gorm:"size:16;default:active;index"`
-	CreatedAt time.Time `gorm:"autoCreateTime"`
-	UpdatedAt time.Time `gorm:"autoUpdateTime"`
+	ID          uint      `gorm:"primaryKey"`
+	Name        string    `gorm:"size:64;not null"`
+	Email       string    `gorm:"size:128;uniqueIndex;not null"`
+	Phone       string    `gorm:"size: 20;uniqueIndex"`
+	Age         uint8     `gorm:"not null"`
+	Status      string    `gorm:"size:16;default:active;index"`
+	CreatedAt   time.Time `gorm:"autoCreateTime"`
+	UpdatedAt   time.Time `gorm:"autoUpdateTime"`
+	LastLoginAt time.Time `gorm:"index"`
 }
 
 func CrudTest() {
@@ -42,57 +44,78 @@ func CrudTest() {
 }
 
 func create(db *gorm.DB) {
+	createUsers(db)
+	if u, err := createUser(db, "Fiona", "fiona@example.com"); err != nil {
+		panic(fmt.Sprintf("failed to create user, %v\n", err))
+	} else {
+		fmt.Printf("new user: %v\n", *u)
+	}
+}
+
+func createUsers(db *gorm.DB) {
+	now := time.Now()
 	users := []User{
 		{
-			Name:   "Alice",
-			Email:  "alice@example.com",
-			Age:    25,
-			Status: "inactive",
+			Name:        "Alice",
+			Email:       "alice@example.com",
+			Phone:       "3239085547",
+			Age:         25,
+			Status:      "inactive",
+			LastLoginAt: now.AddDate(0, 10, -10).Add(-5 * time.Hour).Add(-49 * time.Minute).Add(-10 * time.Second),
 		},
 		{
-			Name:   "Bob",
-			Email:  "bob@example.com",
-			Age:    30,
-			Status: "active",
+			Name:        "Bob",
+			Email:       "bob@example.com",
+			Phone:       "4239085657",
+			Age:         30,
+			Status:      "active",
+			LastLoginAt: now.AddDate(0, 0, -20).Add(-6 * time.Hour).Add(-9 * time.Minute).Add(-34 * time.Second),
 		},
 		{
-			Name:   "Charlie",
-			Email:  "charlie@example.com",
-			Age:    28,
-			Status: "pending",
+			Name:        "Charlie",
+			Email:       "charlie@example.com",
+			Phone:       "9099085547",
+			Age:         28,
+			Status:      "pending",
+			LastLoginAt: now.AddDate(0, 0, -1).Add(-19 * time.Hour).Add(-9 * time.Minute).Add(-1 * time.Second),
 		},
 		{
-			Name:   "Diana",
-			Email:  "diana@example.com",
-			Age:    35,
-			Status: "active",
+			Name:        "Diana",
+			Email:       "diana@example.com",
+			Phone:       "6230085547",
+			Age:         35,
+			Status:      "active",
+			LastLoginAt: now.AddDate(0, 0, -7).Add(-3 * time.Hour).Add(-19 * time.Minute).Add(-56 * time.Second),
 		},
 		{
-			Name:   "Ethan",
-			Email:  "ethan@example.com",
-			Age:    22,
-			Status: "pending",
+			Name:        "Ethan",
+			Email:       "ethan@example.com",
+			Phone:       "2134905547",
+			Age:         22,
+			Status:      "pending",
+			LastLoginAt: now.AddDate(0, 0, -7).Add(-51 * time.Hour).Add(-8 * time.Minute).Add(-15 * time.Second),
 		},
 	}
 
 	if err := db.Create(&users).Error; err != nil {
-		fmt.Println("failed to inserts users, ", err)
+		panic(fmt.Sprintf("failed to inserts users, %v\n", err))
 	} else {
 		fmt.Printf("created %d users\n", len(users))
 	}
+}
 
+func createUser(db *gorm.DB, name, email string) (*User, error) {
 	u := User{
-		Name:   "Fiona",
-		Email:  "fiona@example.com",
-		Age:    40,
+		Name:   name,
+		Email:  email,
 		Status: "active",
 	}
 
 	if err := db.Create(&u).Error; err != nil {
-		fmt.Println("failed to insert user, ", u)
-	} else {
-		fmt.Printf("new user id: %d\n", u.ID)
+		return nil, err
 	}
+
+	return &u, nil
 }
 
 func read(db *gorm.DB) {
@@ -214,6 +237,7 @@ func update(db *gorm.DB) {
 	u2 := User{
 		ID:     1,
 		Name:   "",
+		Phone:  "8760981263",
 		Age:    0,
 		Status: "inactive",
 	}
@@ -268,4 +292,22 @@ func delete(db *gorm.DB) {
 			fmt.Println("rows deleted: ", result.RowsAffected)
 		}
 	}
+
+	// Delete users that haven't logged in during the last 30 days
+	if n, err := DeleteInactiveUsers(db); err != nil {
+		panic(fmt.Sprintf("failed to delete inactive users, %v\n", err))
+	} else {
+		fmt.Printf("%d rows deleted", n)
+	}
+}
+
+func DeleteInactiveUsers(db *gorm.DB) (int64, error) {
+	threshold := time.Now().AddDate(0, 0, -30)
+
+	result := db.Where("last_login_at < ?", threshold).Delete(&User{})
+	if err := result.Error; err != nil {
+		return 0, err
+	}
+
+	return result.RowsAffected, nil
 }

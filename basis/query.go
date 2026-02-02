@@ -2,6 +2,7 @@ package basis
 
 import (
 	"fmt"
+	"time"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -12,6 +13,11 @@ func QueryTest() {
 	scopedTest(db)
 	likeTest(db)
 	groupTest(db)
+	if users, err := searchUsersByEmail(db, "%@gmail.com", 1, 2); err != nil {
+		panic(err)
+	} else {
+		fmt.Printf("%d users on current page: %v\n", len(users), users)
+	}
 	// More examples:
 	// db.Where("status IN ?", []string{"active", "pending"}).Find(&users)
 	// db.Where("status = ? AND age > ?", "active", 25).Find(&users)
@@ -32,42 +38,55 @@ func setup(dsn string) *gorm.DB {
 		panic(fmt.Sprintf("failed to clear users table, %v\n", err))
 	}
 
+	now := time.Now()
 	users := []User{
 		{
-			Name:   "Alice",
-			Email:  "alice@example.com",
-			Age:    25,
-			Status: "inactive",
+			Name:        "Alice",
+			Email:       "alice@example.com",
+			Phone:       "3239085547",
+			Age:         25,
+			Status:      "inactive",
+			LastLoginAt: now.AddDate(0, 0, -10).Add(-5 * time.Hour).Add(-49 * time.Minute).Add(-10 * time.Second),
 		},
 		{
-			Name:   "Bob",
-			Email:  "bob@example.com",
-			Age:    30,
-			Status: "active",
+			Name:        "Bob",
+			Email:       "bob@gmail.com",
+			Phone:       "4239085657",
+			Age:         30,
+			Status:      "active",
+			LastLoginAt: now.AddDate(0, 0, -20).Add(-6 * time.Hour).Add(-9 * time.Minute).Add(-34 * time.Second),
 		},
 		{
-			Name:   "Charlie",
-			Email:  "charlie@example.com",
-			Age:    28,
-			Status: "pending",
+			Name:        "Charlie",
+			Email:       "charlie@gmail.com",
+			Phone:       "9099085547",
+			Age:         28,
+			Status:      "pending",
+			LastLoginAt: now.AddDate(0, 0, -1).Add(-19 * time.Hour).Add(-9 * time.Minute).Add(-1 * time.Second),
 		},
 		{
-			Name:   "Diana",
-			Email:  "diana@example.com",
-			Age:    35,
-			Status: "active",
+			Name:        "Diana",
+			Email:       "diana@example.com",
+			Phone:       "6230085547",
+			Age:         35,
+			Status:      "active",
+			LastLoginAt: now.AddDate(0, 0, -7).Add(-3 * time.Hour).Add(-19 * time.Minute).Add(-56 * time.Second),
 		},
 		{
-			Name:   "Ethan",
-			Email:  "ethan@example.com",
-			Age:    22,
-			Status: "pending",
+			Name:        "Ethan",
+			Email:       "ethan@example.com",
+			Phone:       "2134905547",
+			Age:         22,
+			Status:      "pending",
+			LastLoginAt: now.AddDate(0, 0, -7).Add(-51 * time.Hour).Add(-8 * time.Minute).Add(-15 * time.Second),
 		},
 		{
-			Name:   "Fiona",
-			Email:  "fiona@gmail.com",
-			Age:    40,
-			Status: "active",
+			Name:        "Fiona",
+			Email:       "fiona@gmail.com",
+			Phone:       "2134985547",
+			Age:         40,
+			Status:      "active",
+			LastLoginAt: now,
 		},
 	}
 
@@ -143,11 +162,17 @@ func orderByCreated(desc bool) func(db *gorm.DB) *gorm.DB {
 	}
 }
 
+func youngUsers(min, max, pageNum, pageSize int) func(db *gorm.DB) *gorm.DB {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Scopes(ageBetween(min, max), paginate(pageNum, pageSize))
+	}
+}
+
 // Use LIKE for pattern matching (SQL wildcard: %)
 func likeTest(db *gorm.DB) {
 	u := []User{}
 
-	if err := db.Where("email LIKE ?", "%@gmail.com").Select("name", "email").Find(&u).Error; err != nil {
+	if err := db.Select("name", "email").Where("email LIKE ?", "%@gmail.com").Find(&u).Error; err != nil {
 		panic(err)
 	}
 	fmt.Println("users found:", u)
@@ -165,4 +190,14 @@ func groupTest(db *gorm.DB) {
 		panic(err)
 	}
 	fmt.Println("group users by status,", sc)
+}
+
+func searchUsersByEmail(db *gorm.DB, emailPattern string, pageNum, pageSize int) ([]User, error) {
+	var users []User
+
+	if err := db.Scopes(paginate(pageNum, pageSize)).Where("email LIKE ?", emailPattern).Find(&users).Error; err != nil {
+		return nil, err
+	}
+
+	return users, nil
 }
