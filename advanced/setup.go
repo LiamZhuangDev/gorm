@@ -19,6 +19,9 @@ func setup(dsn string) *gorm.DB {
 		panic(err)
 	}
 
+	// Users and Roles is many-to-many relationship, when creating records with FullSaveAssociations enabled,
+	// Same role name values may appear multiple times inthe same INSERT, but this field must be unique. So INSERT failed!
+	// One solution is to create roles first, then reuse them later.
 	adminRole := Role{
 		Name:        "admin",
 		Description: "Administrator",

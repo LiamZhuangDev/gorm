@@ -1,6 +1,9 @@
 package advanced
 
-import "fmt"
+import (
+	"encoding/json"
+	"fmt"
+)
 
 // Preload in GORM is used for eager loading of associations.
 // It lets you load related data in advance, instead of fetching it later one-by-one.
@@ -30,10 +33,11 @@ func PreloadTest() {
 	db := setup(dsn)
 
 	var u User
-	err := db.Preload("Profile").Preload("Orders").Preload("Orders.Items").Preload("Orders.Items.Product").Where("email = ?", "bob@example.com").First(&u).Error
+	err := db.Preload("Roles").Preload("Profile").Preload("Orders").Preload("Orders.Items").Preload("Orders.Items.Product").Where("email = ?", "bob@example.com").First(&u).Error
 	if err != nil {
 		panic(err)
 	}
 
-	fmt.Println("user:", u)
+	b, _ := json.MarshalIndent(u, "", "  ")
+	fmt.Println(string(b))
 }
