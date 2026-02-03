@@ -1,6 +1,7 @@
 package main
 
 import (
+	advanced "gorm/advanced"
 	basis "gorm/basis"
 )
 
@@ -8,6 +9,8 @@ func main() {
 	basis.CrudTest()
 	basis.QueryTest()
 	basis.RawQueryTest()
+
+	advanced.PreloadTest()
 }
 
 // import (
