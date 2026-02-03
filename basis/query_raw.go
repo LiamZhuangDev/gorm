@@ -8,7 +8,7 @@ import (
 )
 
 func RawQueryTest() {
-	db := setup("raw.db")
+	db := setup("db/raw.db")
 
 	rawGroupTest(db)
 	rawUpdateTest(db)

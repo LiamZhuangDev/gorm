@@ -7,6 +7,7 @@ import (
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 type User struct {
@@ -22,8 +23,10 @@ type User struct {
 }
 
 func CrudTest() {
-	dsn := "crud.db"
-	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{})
+	dsn := "db/crud.db"
+	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Info),
+	})
 	if err != nil {
 		fmt.Printf("Failed to open %s, %v\n", dsn, err)
 	}
