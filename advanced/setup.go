@@ -1,6 +1,8 @@
 package advanced
 
 import (
+	"fmt"
+
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -16,8 +18,12 @@ var userRole = Role{
 	Description: "Regular user",
 }
 
-func setup(dsn string) *gorm.DB {
-	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{
+func setup(dsn string, enforceFK ...bool) *gorm.DB {
+	fk := "off"
+	if len(enforceFK) > 0 && enforceFK[0] {
+		fk = "on"
+	}
+	db, err := gorm.Open(sqlite.Open(fmt.Sprintf("file:%s?_foreign_keys=%s", dsn, fk)), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Info),
 	})
 
