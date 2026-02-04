@@ -18,6 +18,7 @@ func AssociationTest() {
 	replaceForMany2ManyTest(db)
 	deleteAssociationTest(db)
 	clearAssociationTest(db)
+	countAssiciationTest(db)
 }
 
 // Append admin role to user: this adds entries to the user_roles join table
@@ -200,4 +201,11 @@ func clearAssociationTest(db *gorm.DB) {
 	// Reload to verify
 	after, _ := json.MarshalIndent(u, "", "  ")
 	fmt.Println(string(after))
+}
+
+func countAssiciationTest(db *gorm.DB) {
+	var u User
+	db.Preload("Orders").First(&u, 1)
+
+	fmt.Printf("The count of Orders associations: %d\n", db.Model(&u).Association("Orders").Count())
 }

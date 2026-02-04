@@ -11,6 +11,7 @@ func main() {
 	basis.RawQueryTest()
 
 	advanced.PreloadTest()
+	advanced.AssociationTest()
 }
 
 // import (
