@@ -20,9 +20,10 @@ func TransactionTest() {
 	dsn := "db/transaction.db"
 	db := setup(dsn, true)
 
-	autoTransactionTest(db)
+	// autoTransactionTest(db)
 	// manualTransactionTest(db)
 	// savePointTest(db)
+	nestedTransactionsTest(db)
 }
 
 func autoTransaction(db *gorm.DB, u *User) error {
@@ -245,5 +246,71 @@ func savePointTest(db *gorm.DB) {
 }
 
 func nestedTransactionsTest(db *gorm.DB) {
+	userId := uint(1)
 
+	err := db.Transaction(func(tx *gorm.DB) error {
+		// find the user
+		var u User
+		if err := tx.
+			Preload("Orders").
+			Preload("Orders.Items").
+			Preload("Orders.Items.Product").
+			First(&u, userId).Error; err != nil {
+			return err // roll back
+		}
+
+		// take a snapshot before inner transaction
+		before, _ := json.MarshalIndent(u, "", "  ")
+		fmt.Println(string(before))
+
+		// build and insert the order
+		order := Order{
+			OrderNumber: "ORD-3001",
+			UserID:      u.ID,
+			Status:      "created",
+		}
+		if err := tx.Create(&order).Error; err != nil {
+			return err // roll back
+		}
+
+		// by default, an inner failure within a transaction will cause a rollback of the entire outer transaction
+		return tx.Transaction(func(tx2 *gorm.DB) error {
+			// build and insert order items
+			items := []OrderItem{
+				{OrderID: order.ID, ProductID: 999, Quantity: 1, Price: 999.00}, // change ProductID to 999 to trigger roll back
+				{OrderID: order.ID, ProductID: 2, Quantity: 1, Price: 249.00},
+			}
+			if err := tx2.Create(&items).Error; err != nil {
+				return err // roll back
+			}
+
+			// update order total price
+			var total float64
+			for _, it := range items {
+				total += it.Price * float64(it.Quantity)
+			}
+			if err := tx2.Model(&order).Update("total_price", total).Error; err != nil {
+				return err
+			}
+
+			return nil
+		})
+	})
+
+	if err != nil {
+		panic(err)
+	}
+
+	// reload user to verify
+	var refreshed User
+	if err := db.
+		Preload("Orders").
+		Preload("Orders.Items").
+		Preload("Orders.Items.Product").
+		First(&refreshed, userId).Error; err != nil {
+		panic(err)
+	}
+
+	after, _ := json.MarshalIndent(&refreshed, "", "  ")
+	fmt.Println(string(after))
 }
