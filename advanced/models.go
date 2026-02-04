@@ -2,7 +2,23 @@ package advanced
 
 import "time"
 
-// ERD (Entity-Relationship Diagram) arrows always point from the foreign key holder to the primary key owner.
+// 1. Relationship
+// HasOne: Another table has a foreign key pointing to me, and it's unique.
+// HasMany: Another table has a foreign key pointing to me, and it's NOT unique.
+// BelongsTo: This model has a foreign key that points to another model.
+// Many2Many: A separate join table has TWO foreign keys, each pointing to one side of the relationship.
+//
+// 2. Relationship Matrix
+// | Relationship keyword | FK location                 | Cardinality         |
+// | -------------------- | --------------------------- | --------------------|
+// | BelongsTo            | On current model            | 1-to-1 or 1-to-many |
+// | HasOne               | On other model (unique)     | 1-to-1              |
+// | HasMany              | On other model (non-unique) | 1-to-many           |
+// | Many2Many            | Join table                  | many-to-many        |
+//
+// 3. ERD (Entity-Relationship Diagram) arrows always point from the foreign key holder to the primary key owner.
+//
+// 4. Example
 // +-------------------+            +-------------------+
 // |       users       |            |      profiles     |
 // +-------------------+            +-------------------+

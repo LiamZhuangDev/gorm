@@ -6,6 +6,16 @@ import (
 	"gorm.io/gorm/logger"
 )
 
+var adminRole = Role{
+	Name:        "admin",
+	Description: "Administrator",
+}
+
+var userRole = Role{
+	Name:        "user",
+	Description: "Regular user",
+}
+
 func setup(dsn string) *gorm.DB {
 	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Info),
@@ -22,20 +32,9 @@ func setup(dsn string) *gorm.DB {
 	// Users and Roles is many-to-many relationship, when creating records with FullSaveAssociations enabled,
 	// Same role name values may appear multiple times inthe same INSERT, but this field must be unique. So INSERT failed!
 	// One solution is to create roles first, then reuse them later.
-	adminRole := Role{
-		Name:        "admin",
-		Description: "Administrator",
-	}
-
 	if err := db.Create(&adminRole).Error; err != nil {
 		panic(err)
 	}
-
-	userRole := Role{
-		Name:        "user",
-		Description: "Regular user",
-	}
-
 	if err := db.Create(&userRole).Error; err != nil {
 		panic(err)
 	}
