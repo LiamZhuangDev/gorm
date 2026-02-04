@@ -2,16 +2,16 @@ package main
 
 import (
 	advanced "gorm/advanced"
-	basis "gorm/basis"
 )
 
 func main() {
-	basis.CrudTest()
-	basis.QueryTest()
-	basis.RawQueryTest()
+	// basis.CrudTest()
+	// basis.QueryTest()
+	// basis.RawQueryTest()
 
-	advanced.PreloadTest()
-	advanced.AssociationTest()
+	// advanced.PreloadTest()
+	// advanced.AssociationTest()
+	advanced.TransactionTest()
 }
 
 // import (
