@@ -129,15 +129,16 @@ type Product struct {
 	UpdatedAt time.Time `gorm:"autoUpdateTime"`
 }
 
-// GORM never auto-loads reverse associations
+// GORM never auto-loads reverse associations to
+// prevents infinite loops & performance disasters.
 // So Role.Users == null is correct behavior
-// Prevents infinite loops & performance disasters
 // We can hide reverse fields from JSON (json:"-")
 type Role struct {
-	ID          uint      `gorm:"primaryKey"`
-	Name        string    `gorm:"uniqueIndex"`
-	Description string    `gorm:"size:64"`
-	Users       []User    `gorm:"many2many:user_roles" json:"-"`
-	CreatedAt   time.Time `gorm:"autoCreateTime"`
-	UpdatedAt   time.Time `gorm:"autoUpdateTime"`
+	ID          uint   `gorm:"primaryKey"`
+	Name        string `gorm:"uniqueIndex"`
+	Description string `gorm:"size:64"`
+	Users       []User `gorm:"many2many:user_roles"`
+	/*Users       []User    `gorm:"many2many:user_roles" json:"-"`*/
+	CreatedAt time.Time `gorm:"autoCreateTime"`
+	UpdatedAt time.Time `gorm:"autoUpdateTime"`
 }

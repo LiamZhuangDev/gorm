@@ -3,6 +3,9 @@ package advanced
 import (
 	"encoding/json"
 	"fmt"
+
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // Preload in GORM is used for eager loading of associations.
@@ -32,12 +35,81 @@ func PreloadTest() {
 	dsn := "db/preload.db"
 	db := setup(dsn)
 
+	preloadTest(db)
+	conditionalPreloadTest(db)
+	nestedPreloadTest(db)
+	preloadAllTest(db)
+	reversePreloadTest(db)
+}
+
+func preloadTest(db *gorm.DB) {
 	var u User
+
+	err := db.Preload("Roles").Preload("Profile").Preload("Orders").Where("email = ?", "alice@example.com").First(&u).Error
+	if err != nil {
+		panic(err)
+	}
+
+	b, _ := json.MarshalIndent(u, "", "  ")
+	fmt.Println(string(b))
+}
+
+func conditionalPreloadTest(db *gorm.DB) {
+	var u User
+
+	err := db.Preload("Roles").Preload("Profile").Preload("Orders", "status = ?", "delivered").Where("email = ?", "bob@example.com").First(&u).Error
+	if err != nil {
+		panic(err)
+	}
+
+	b, _ := json.MarshalIndent(u, "", "  ")
+	fmt.Println(string(b))
+}
+
+func nestedPreloadTest(db *gorm.DB) {
+	var u User
+
 	err := db.Preload("Roles").Preload("Profile").Preload("Orders").Preload("Orders.Items").Preload("Orders.Items.Product").Where("email = ?", "bob@example.com").First(&u).Error
 	if err != nil {
 		panic(err)
 	}
 
 	b, _ := json.MarshalIndent(u, "", "  ")
+	fmt.Println(string(b))
+}
+
+// clause.Associations automatically preloads all associations of the model
+// This is useful when you want to load all related data without specifying each association
+// Note: This only preloads direct associations, NOT nested ones
+func preloadAllTest(db *gorm.DB) {
+	var u User
+
+	err := db.Preload(clause.Associations).Where("email = ?", "bob@example.com").First(&u).Error
+	if err != nil {
+		panic(err)
+	}
+
+	b, _ := json.MarshalIndent(u, "", "  ")
+	fmt.Println(string(b))
+}
+
+// Reversed preload for many-to-many relationship
+// It works only when Role model has Users field.
+func reversePreloadTest(db *gorm.DB) {
+	var roles []Role
+
+	// Find(&rolesWithUsers):
+	// search roles table，retrieve all roles
+	//
+	// Preload("Users"):
+	// For each role：
+	// 		Search user_roles join table
+	// 		Search users table
+	// 		Populate role.Users
+	if err := db.Preload("Users").Find(&roles).Error; err != nil {
+		panic(err)
+	}
+
+	b, _ := json.MarshalIndent(&roles, "", "  ")
 	fmt.Println(string(b))
 }
