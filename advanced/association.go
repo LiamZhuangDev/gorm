@@ -11,6 +11,7 @@ func AssociationTest() {
 	dsn := "db/association.db"
 	db := setup(dsn)
 
+	findTest(db)
 	appendTest(db)
 	updateForBelongsToTest(db)
 	updatesForHasOneTest(db)
@@ -19,6 +20,21 @@ func AssociationTest() {
 	deleteAssociationTest(db)
 	clearAssociationTest(db)
 	countAssiciationTest(db)
+}
+
+func findTest(db *gorm.DB) {
+	var alice User
+	if err := db.First(&alice, "name = ?", "Alice").Error; err != nil {
+		panic(err)
+	}
+
+	var roles []Role
+	if err := db.Model(&alice).Association("Roles").Find(&roles); err != nil {
+		panic(err)
+	}
+
+	j, _ := json.MarshalIndent(roles, "", "  ")
+	fmt.Println(string(j))
 }
 
 // Append admin role to user: this adds entries to the user_roles join table
