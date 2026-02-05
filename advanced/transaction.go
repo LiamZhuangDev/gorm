@@ -24,10 +24,10 @@ func TransactionTest() {
 	dsn := "db/transaction.db"
 	db := setup(dsn, true)
 
-	// autoTransactionTest(db)
-	// manualTransactionTest(db)
-	// savePointTest(db)
-	// nestedTransactionsTest(db)
+	autoTransactionTest(db)
+	manualTransactionTest(db)
+	savePointTest(db)
+	nestedTransactionsTest(db)
 	idempotencyTest(db)
 }
 
@@ -333,6 +333,7 @@ func idempotencyTest(db *gorm.DB) {
 		panic(err)
 	}
 
+	// Two create attempts with the same request ID
 	order1, _ := createOrderIdempotent(db, "ORD-888", 1, 5000, "REQ-ORDER-001")
 	order2, _ := createOrderIdempotent(db, "ORD-777", 1, 5000, "REQ-ORDER-001")
 
