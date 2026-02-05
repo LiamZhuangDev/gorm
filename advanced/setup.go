@@ -18,6 +18,24 @@ var userRole = Role{
 	Description: "Regular user",
 }
 
+var products = []Product{
+	{
+		Name:  "MacBook Pro 14",
+		SKU:   "MBP-14-2024",
+		Price: 1999.00,
+	},
+	{
+		Name:  "iPhone 15 Pro",
+		SKU:   "IPHONE-15-PRO",
+		Price: 999.00,
+	},
+	{
+		Name:  "AirPods Pro",
+		SKU:   "AIRPODS-PRO",
+		Price: 249.00,
+	},
+}
+
 func setup(dsn string, enforceFK ...bool) *gorm.DB {
 	fk := "off"
 	if len(enforceFK) > 0 && enforceFK[0] {
@@ -47,24 +65,6 @@ func setup(dsn string, enforceFK ...bool) *gorm.DB {
 
 	// Seed products first (independent entities, no foreign keys)
 	// Products are referenced by order items, so they must exist before creating orders
-	products := []Product{
-		{
-			Name:  "MacBook Pro 14",
-			SKU:   "MBP-14-2024",
-			Price: 1999.00,
-		},
-		{
-			Name:  "iPhone 15 Pro",
-			SKU:   "IPHONE-15-PRO",
-			Price: 999.00,
-		},
-		{
-			Name:  "AirPods Pro",
-			SKU:   "AIRPODS-PRO",
-			Price: 249.00,
-		},
-	}
-
 	if err := db.Create(&products).Error; err != nil {
 		panic(err)
 	}

@@ -364,6 +364,7 @@ func createOrderIdempotent(db *gorm.DB, orderNum string, userID uint, amount flo
 
 		if err := tx.Create(&order).Error; err != nil {
 			if isDuplicateKey(err) {
+				// Fetch existing order and return it
 				return tx.Where("request_id = ?", requestID).First(&order).Error
 			}
 			return err
