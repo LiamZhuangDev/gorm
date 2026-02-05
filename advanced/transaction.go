@@ -12,8 +12,12 @@ package advanced
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
+	"time"
 
+	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 func TransactionTest() {
@@ -23,7 +27,8 @@ func TransactionTest() {
 	// autoTransactionTest(db)
 	// manualTransactionTest(db)
 	// savePointTest(db)
-	nestedTransactionsTest(db)
+	// nestedTransactionsTest(db)
+	idempotencyTest(db)
 }
 
 func autoTransaction(db *gorm.DB, u *User) error {
@@ -313,4 +318,63 @@ func nestedTransactionsTest(db *gorm.DB) {
 
 	after, _ := json.MarshalIndent(&refreshed, "", "  ")
 	fmt.Println(string(after))
+}
+
+// Idempotency: Doing the same operation multiple times has the same effect as doing it once.
+func idempotencyTest(db *gorm.DB) {
+	dsn := "db/idempotency.db"
+	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Info),
+	})
+	if err != nil {
+		panic(err)
+	}
+	if err := db.AutoMigrate(&IdempotentOrder{}); err != nil {
+		panic(err)
+	}
+
+	order1, _ := createOrderIdempotent(db, "ORD-888", 1, 5000, "REQ-ORDER-001")
+	order2, _ := createOrderIdempotent(db, "ORD-777", 1, 5000, "REQ-ORDER-001")
+
+	fmt.Println("Idempotency test passed:", order1.ID == order2.ID)
+}
+
+type IdempotentOrder struct {
+	ID          uint   `gorm:"primaryKey"`
+	OrderNumber string `gorm:"uniqueIndex"`
+	UserID      uint   // Foreign key to users table
+	TotalPrice  float64
+	Status      string
+	CreatedAt   time.Time `gorm:"autoCreateTime"`
+	UpdatedAt   time.Time `gorm:"autoUpdateTime"`
+	RequestID   string    `gorm:"uniqueIndex"` // Idempotent key
+}
+
+func createOrderIdempotent(db *gorm.DB, orderNum string, userID uint, amount float64, requestID string) (*IdempotentOrder, error) {
+	var order IdempotentOrder
+
+	err := db.Transaction(func(tx *gorm.DB) error {
+		order = IdempotentOrder{
+			UserID:      userID,
+			OrderNumber: orderNum,
+			TotalPrice:  amount,
+			Status:      "created",
+			RequestID:   requestID,
+		}
+
+		if err := tx.Create(&order).Error; err != nil {
+			if isDuplicateKey(err) {
+				return tx.Where("request_id = ?", requestID).First(&order).Error
+			}
+			return err
+		}
+
+		return nil
+	})
+
+	return &order, err
+}
+
+func isDuplicateKey(err error) bool {
+	return strings.Contains(err.Error(), "UNIQUE constraint failed")
 }
