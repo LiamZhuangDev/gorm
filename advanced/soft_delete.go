@@ -63,6 +63,7 @@ func SoftDeleteTest() {
 	}
 
 	// soft delete the order
+	// add Unscoped for hard delete: db.Unscoped().Delete(..)
 	if err := db.Delete(&order).Error; err != nil {
 		panic(err)
 	}
