@@ -9,4 +9,5 @@ require (
 	golang.org/x/text v0.33.0 // indirect
 	gorm.io/driver/sqlite v1.6.0 // indirect
 	gorm.io/gorm v1.31.1 // indirect
+	gorm.io/plugin/optimisticlock v1.1.3
 )
