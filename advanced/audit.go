@@ -46,6 +46,7 @@ func AuditTest() {
 	}
 
 	AuditHooksTest(db)
+	AuditCallbackTest(db)
 }
 
 func AuditHooksTest(db *gorm.DB) {
@@ -59,18 +60,17 @@ func AuditHooksTest(db *gorm.DB) {
 	}
 
 	// reload to verify the audit fields
-	if err := db.Find(&o).Error; err != nil {
+	var o1 OrderWithAudit
+	if err := db.Where("ID = ?", o.ID).First(&o1).Error; err != nil {
 		panic(err)
 	}
 
-	b, _ := json.MarshalIndent(&o, "", "  ")
+	b, _ := json.MarshalIndent(&o1, "", "  ")
 	fmt.Println(string(b))
 }
 
 func (o *OrderWithAudit) BeforeCreate(tx *gorm.DB) error {
-	fmt.Println("checkpoint hit")
 	if uid, ok := tx.Statement.Context.Value(ctxKeyUserID{}).(uint); ok {
-		fmt.Println("uid:", uid)
 		o.CreatedBy = uid
 		o.UpdatedBy = uid
 	}
@@ -84,5 +84,45 @@ func (o *OrderWithAudit) BeforeUpdate(tx *gorm.DB) error {
 	return nil
 }
 
+// Simplified Create pipeline:
+// BeforeCreate(model hook)
+// gorm:before_create <-- callback registered before this step
+// gorm:create
+// gorm:after_create
+// AfterCreate(model hook)
 func AuditCallbackTest(db *gorm.DB) {
+	// instead of per-model hooks, we can use global GORM callback
+	db.Callback().Create().Before("gorm:create").
+		Register("audit:create", func(tx *gorm.DB) {
+			if uid, ok := tx.Statement.Context.Value(ctxKeyUserID{}).(uint); ok {
+				tx.Statement.SetColumn("CreatedBy", uid)
+				tx.Statement.SetColumn("UpdatedBy", uid)
+			}
+		})
+
+	db.Callback().Update().Before("gorm:update").
+		Register("audit:update", func(tx *gorm.DB) {
+			if uid, ok := tx.Statement.Context.Value(ctxKeyUserID{}).(uint); ok {
+				tx.Statement.SetColumn("UpdatedBy", uid)
+			}
+		})
+
+	// insert an order
+	o := OrderWithAudit{
+		Status: "created",
+	}
+
+	ctx := context.WithValue(context.Background(), ctxKeyUserID{}, uint(42))
+	if err := db.WithContext(ctx).Save(&o).Error; err != nil {
+		panic(err)
+	}
+
+	// reload to verify
+	var o1 OrderWithAudit
+	if err := db.Where("ID = ?", o.ID).First(&o1).Error; err != nil {
+		panic(err)
+	}
+
+	b, _ := json.MarshalIndent(&o1, "", "  ")
+	fmt.Println(string(b))
 }

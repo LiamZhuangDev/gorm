@@ -16,6 +16,7 @@ func main() {
 	advanced.HookTest()
 	advanced.SoftDeleteTest()
 	advanced.OptimisticLockingTest()
+	advanced.AuditTest()
 }
 
 // import (
