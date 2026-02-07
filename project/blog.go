@@ -28,19 +28,8 @@ func BlogTest() {
 		panic(err)
 	}
 
-	userID := uint(1)
-	numOfPosts := 10
-	posts, err := GetUserLatestPosts(db, userID, numOfPosts)
-
-	if err != nil {
-		panic(err)
-	}
-
-	b, err := json.MarshalIndent(posts, "", "  ")
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println(string(b))
+	GetUserLatestPostsTest(db)
+	CountPostCommentsTest(db)
 }
 
 func SeedBlogData(db *gorm.DB) error {
@@ -124,4 +113,52 @@ func GetUserLatestPosts(db *gorm.DB, userID uint, number int) ([]Post, error) {
 		return nil, err
 	}
 	return posts, nil
+}
+
+func GetUserLatestPostsTest(db *gorm.DB) {
+	userID := uint(1)
+	numOfPosts := 10
+	posts, err := GetUserLatestPosts(db, userID, numOfPosts)
+
+	if err != nil {
+		panic(err)
+	}
+
+	b, err := json.MarshalIndent(posts, "", "  ")
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(string(b))
+}
+
+type PostWithCommentCount struct {
+	Post
+	CommentCount int64
+}
+
+func CountPostComments(db *gorm.DB) ([]PostWithCommentCount, error) {
+	var result []PostWithCommentCount
+
+	if err := db.Model(&Post{}).
+		Select("posts.*, COUNT(comments.id) AS comment_count").
+		Joins("LEFT JOIN comments ON comments.post_id = posts.id").
+		Group("posts.id").
+		Scan(&result).Error; err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+func CountPostCommentsTest(db *gorm.DB) {
+	result, err := CountPostComments(db)
+
+	if err != nil {
+		panic(err)
+	}
+
+	b, err := json.MarshalIndent(result, "", "  ")
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(string(b))
 }
