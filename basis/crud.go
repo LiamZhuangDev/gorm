@@ -121,6 +121,9 @@ func createUser(db *gorm.DB, name, email string) (*User, error) {
 	return &u, nil
 }
 
+// First vs Find
+// If no matching rows, First will return "record not found" error, but
+// Find won't report any error (err == nil and RowsAffected == 0)
 func read(db *gorm.DB) {
 	// First: Get the first matching record, order by primary key
 	var u User
