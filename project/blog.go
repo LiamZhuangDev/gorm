@@ -30,6 +30,16 @@ func BlogTest() {
 
 	GetUserLatestPostsTest(db)
 	CountPostCommentsTest(db)
+	PostWithTagsTest(db)
+}
+
+// ===== Tags =====
+var Tags = []Tag{
+	{Name: "Go"},
+	{Name: "Database"},
+	{Name: "GORM"},
+	{Name: "Backend"},
+	{Name: "Cloud"},
 }
 
 func SeedBlogData(db *gorm.DB) error {
@@ -45,15 +55,7 @@ func SeedBlogData(db *gorm.DB) error {
 		return err
 	}
 
-	// ===== Tags =====
-	tags := []Tag{
-		{Name: "Go"},
-		{Name: "Database"},
-		{Name: "GORM"},
-		{Name: "Backend"},
-		{Name: "Cloud"},
-	}
-	if err := db.Create(&tags).Error; err != nil {
+	if err := db.Create(&Tags).Error; err != nil {
 		return err
 	}
 
@@ -78,7 +80,7 @@ func SeedBlogData(db *gorm.DB) error {
 		n := r.Intn(3) + 1
 		selected := make([]Tag, n)
 		for j := range n {
-			selected[j] = tags[r.Intn(len(tags))]
+			selected[j] = Tags[r.Intn(len(Tags))]
 		}
 
 		if err := db.Model(&posts[i]).Association("Tags").Append(selected); err != nil {
@@ -160,5 +162,84 @@ func CountPostCommentsTest(db *gorm.DB) {
 	if err != nil {
 		panic(err)
 	}
+	fmt.Println(string(b))
+}
+
+func PublishPostWithTags(
+	db *gorm.DB,
+	userID uint,
+	subject, content string,
+	tagIDs []uint) error {
+	return db.Transaction(func(tx *gorm.DB) error {
+		// find tags
+		var tags []Tag
+		if len(tagIDs) > 0 {
+			if err := tx.Find(&tags, "id IN ?", tagIDs).Error; err != nil {
+				return err // roll back
+			}
+		}
+
+		// create a post
+		p := Post{
+			Subject: subject,
+			Content: content,
+			UserID:  userID,
+		}
+		if err := tx.Create(&p).Error; err != nil {
+			return err // roll back
+		}
+
+		// attach tags to post
+		if err := tx.Model(&p).Association("Tags").Append(tags); err != nil {
+			return err // roll back
+		}
+
+		// or create with association
+		// p1 := Post{
+		// 	Subject: subject,
+		// 	Content: content,
+		// 	UserID:  userID,
+		// 	Tags:    tags, // <-- attach tags here! It won't overwrite existing tags because the post is just created and no old tags exist!
+		// }
+		// if err := tx.Create(&p1).Error; err != nil {
+		// 	return err // roll back
+		// }
+
+		// Commit
+		return nil
+	})
+}
+
+func PostWithTagsTest(db *gorm.DB) {
+	userID := 1
+	var u User
+	if err := db.Preload("Posts").Preload("Posts.Tags").First(&u, userID).Error; err != nil {
+		panic(err)
+	}
+
+	// print user before publish a post
+	b, _ := json.MarshalIndent(&u, "", "  ")
+	fmt.Println(string(b))
+
+	// randomly select 1-3 tags
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	n := r.Intn(3) + 1
+	tagIDs := make([]uint, n)
+	for i := range n {
+		tagIDs[i] = uint(r.Intn(len(Tags)) + 1)
+	}
+
+	// publish
+	if err := PublishPostWithTags(db, uint(userID), "This is a new Post", "Just wanna say hello web3!", tagIDs); err != nil {
+		panic(err)
+	}
+
+	// reload to verify
+	var u1 User
+	if err := db.Preload("Posts").Preload("Posts.Tags").Find(&u1, userID).Error; err != nil {
+		panic(err)
+	}
+
+	b, _ = json.MarshalIndent(&u1, "", "  ")
 	fmt.Println(string(b))
 }
