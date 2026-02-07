@@ -28,9 +28,10 @@ func BlogTest() {
 		panic(err)
 	}
 
-	GetUserLatestPostsTest(db)
-	CountPostCommentsTest(db)
-	PostWithTagsTest(db)
+	// GetUserLatestPostsTest(db)
+	// CountPostCommentsTest(db)
+	// PostWithTagsTest(db)
+	SoftDeleteCommentTest(db)
 }
 
 // ===== Tags =====
@@ -241,5 +242,50 @@ func PostWithTagsTest(db *gorm.DB) {
 	}
 
 	b, _ = json.MarshalIndent(&u1, "", "  ")
+	fmt.Println(string(b))
+}
+
+func SoftDeleteComment(db *gorm.DB, commentID uint) error {
+	return db.Transaction(func(tx *gorm.DB) error {
+		var comment Comment
+		if err := tx.First(&comment, commentID).Error; err != nil {
+			return err // roll back
+		}
+
+		if err := tx.Delete(&comment).Error; err != nil {
+			return err // roll back
+		}
+
+		return nil // commit
+	})
+}
+
+func SoftDeleteCommentTest(db *gorm.DB) {
+	commentID := 1
+	var c Comment
+	if err := db.First(&c, commentID).Error; err != nil {
+		panic(err)
+	}
+
+	// load the linked post
+	var p Post
+	if err := db.Preload("Comments").Find(&p, c.PostID).Error; err != nil {
+		panic(err)
+	}
+
+	b, _ := json.MarshalIndent(&p, "", "  ")
+	fmt.Println(string(b))
+
+	if err := SoftDeleteComment(db, uint(commentID)); err != nil {
+		panic(err)
+	}
+
+	// reload to verify
+	var p1 Post
+	if err := db.Preload("Comments").First(&p1, c.PostID).Error; err != nil {
+		panic(err)
+	}
+
+	b, _ = json.MarshalIndent(&p1, "", "  ")
 	fmt.Println(string(b))
 }

@@ -1,6 +1,10 @@
 package project
 
-import "time"
+import (
+	"time"
+
+	"gorm.io/gorm"
+)
 
 type User struct {
 	ID    uint   `gorm:"primaryKey"`
@@ -26,8 +30,9 @@ type Tag struct {
 }
 
 type Comment struct {
-	ID      uint   `gorm:"primaryKey"`
-	PostID  uint   `gorm:"index"` // FK
-	Content string `gorm:"not null"`
-	UserID  uint   `gorm:"index"` // FK
+	ID        uint           `gorm:"primaryKey"`
+	PostID    uint           `gorm:"index"` // FK
+	Content   string         `gorm:"not null"`
+	UserID    uint           `gorm:"index"` // FK
+	DeletedAt gorm.DeletedAt `gorm:"index"`
 }
