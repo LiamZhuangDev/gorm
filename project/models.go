@@ -13,10 +13,10 @@ type Post struct {
 	ID        uint   `gorm:"primaryKey"`
 	Subject   string `gorm:"size:255;not null"`
 	Content   string `gorm:"not null"`
-	UserID    uint   `gorm:"index"` // FK
+	UserID    uint   `gorm:"index:idx_user_created,priority:1"` // FK
 	Tags      []Tag  `gorm:"many2many:post_tags"`
 	Comments  []Comment
-	CreatedAt time.Time `gorm:"autoCreateAt"`
+	CreatedAt time.Time `gorm:"autoCreateAt;index:idx_user_created,priority:2"`
 }
 
 type Tag struct {
