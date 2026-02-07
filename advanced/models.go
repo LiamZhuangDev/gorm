@@ -90,7 +90,7 @@ type User struct {
 
 type Profile struct {
 	ID        uint      `gorm:"primaryKey"`
-	UserID    uint      `gorm:"uniqueIndex"` // Foreign key to users table, enforce one-to-one relationship
+	UserID    uint      `gorm:"uniqueIndex"` // FK to users table, enforce one-to-one relationship
 	Nickname  string    `gorm:"size:64"`
 	Phone     string    `gorm:"uniqueIndex;not null"`
 	Address   string    `gorm:"not null"`
@@ -101,7 +101,7 @@ type Profile struct {
 type Order struct {
 	ID          uint        `gorm:"primaryKey"`
 	OrderNumber string      `gorm:"uniqueIndex"`
-	UserID      uint        // Foreign key to users table
+	UserID      uint        `gorm:"index"` // FK to users table
 	Items       []OrderItem // Has-Many
 	TotalPrice  float64
 	Status      string
@@ -111,8 +111,8 @@ type Order struct {
 
 type OrderItem struct {
 	ID        uint    `gorm:"primaryKey"`
-	OrderID   uint    // Foreign key to orders table
-	ProductID uint    // Foreign key to products table
+	OrderID   uint    `gorm:"index"` // FK to orders table
+	ProductID uint    `gorm:"index"` // FK to products table
 	Product   Product // Belongs To: OrderItem belongs to one product
 	Quantity  uint
 	Price     float64
