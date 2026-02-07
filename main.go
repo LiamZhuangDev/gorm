@@ -1,8 +1,9 @@
 package main
 
 import (
-	advanced "gorm/advanced"
-	basis "gorm/basis"
+	"gorm/advanced"
+	"gorm/basis"
+	"gorm/project"
 )
 
 func main() {
@@ -18,6 +19,8 @@ func main() {
 	advanced.OptimisticLockingTest()
 	advanced.AuditTest()
 	advanced.JoinTest()
+
+	project.BlogTest()
 }
 
 // import (
